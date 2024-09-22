@@ -7,14 +7,10 @@ import numpy as np
 df = pd.read_csv("medical_examination.csv")
 
 # 2
-df['overweight'] = df['weight'] / ((df['height'] / 100) **2)
-df_copy=df.copy()
-radice=df_copy['height']**2
-df_copy['weight']=df_copy['weight'].astype(int)
-df_copy['overweight']=df_copy['weight']/radice
+df['overweight'] = (df["weight"]/((df["height"]/100)**2)).apply(lambda x : 1 if x>25 else 0)
 
-df_copy.loc[df_copy['overweight'] < 25, 'overweight'] = 0
-df_copy.loc[df_copy['overweight'] > 25, 'overweight'] = 1
+df.loc[df['overweight'] < 25, 'overweight'] = 0
+df.loc[df['overweight'] > 25, 'overweight'] = 1
 # 3
 df.loc[df['cholesterol'] == 1, 'cholesterol'] = 0
 df.loc[df['gluc'] > 1, 'gluc'] = 1
@@ -24,19 +20,19 @@ df.loc[df['gluc'] == 1, 'gluc'] = 0
 # 4
 def draw_cat_plot():
     # 5
-    df_cat = None
+    df_cat = pd.melt(df, id_vars = 'cardio', value_vars = ['active', 'alco', 'cholesterol', 'gluc', 'overweight', 'smoke'])
 
 
     # 6
-    df_cat = None
+    #df_cat = None
     
 
     # 7
-
+    catPlotfig = sns.catplot(data = df_cat, x="variable", hue = "value", kind = "count").set_axis_labels("variable", "total")
 
 
     # 8
-    fig = None
+    fig = catPlotfig.fig
 
 
     # 9
@@ -46,24 +42,37 @@ def draw_cat_plot():
 
 # 10
 def draw_heat_map():
-    # 11
-    df_heat = None
+    # Clean the data
+    
+    df_heat = df.loc[(df.ap_lo <= df.ap_hi)
+                 & (df.height >= df.height.quantile(0.025))
+                 & (df.height <= df.height.quantile(0.975))
+                 & (df.weight >= df.weight.quantile(0.025))
+                 & (df.weight <= df.weight.quantile(0.975)), :]
 
-    # 12
-    corr = None
+    # Calculate the correlation matrix
+    corr = df_heat.corr()
 
-    # 13
-    mask = None
-
-
-
-    # 14
-    fig, ax = None
-
-    # 15
+    # Generate a mask for the upper triangle
+    mask = np.triu(corr)
 
 
 
-    # 16
+    # Set up the matplotlib figure
+    fig, ax = plt.subplots()
+    sns.heatmap(
+    corr.applymap(lambda x: 0 if abs(x) < 1e-8 else x),  # Elimina diferencias pequeñas
+    annot=True,
+    square=True,
+    mask=mask,
+    fmt=".1f",  # Asegura que los valores estén redondeados a un decimal
+    cbar_kws={"shrink": 0.5}
+    )
+
+    # Draw the heatmap with 'sns.heatmap()'
+
+
+
+    # Do not modify the next two lines
     fig.savefig('heatmap.png')
     return fig
